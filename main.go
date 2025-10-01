@@ -72,7 +72,7 @@ func main() {
 	if err := app.connectDatabase(); err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
-	defer app.db.Close()
+	defer func() { _ = app.db.Close() }()
 
 	// Ensure database schema is ready
 	if err := app.prepareDatabase(); err != nil {
@@ -228,7 +228,7 @@ func (app *App) getPhotosToProcess() ([]Photo, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to query photos: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var photos []Photo
 	for rows.Next() {
@@ -366,10 +366,10 @@ func (app *App) downloadAndAnalyzeImage(photo *Photo) (image.Image, error) {
 			lastErr = err
 			continue
 		}
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		if resp.StatusCode != http.StatusOK {
-			resp.Body.Close()
+			_ = resp.Body.Close()
 			lastErr = fmt.Errorf("HTTP %d", resp.StatusCode)
 			continue
 		}
