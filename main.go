@@ -10,6 +10,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -113,6 +114,14 @@ func (app *App) loadConfig(configFile string) error {
 		return fmt.Errorf("image_base_url is required")
 	}
 
+	// Automatically add /uploads/ if not present
+	if !strings.HasSuffix(config.ImageBaseURL, "/uploads/") {
+		if !strings.HasSuffix(config.ImageBaseURL, "/") {
+			config.ImageBaseURL += "/"
+		}
+		config.ImageBaseURL += "uploads/"
+	}
+
 	app.config = config
 	return nil
 }
@@ -191,11 +200,11 @@ func (app *App) findOrCreateBWTag() error {
 func (app *App) getPhotosToProcess() ([]Photo, error) {
 	query := `
 		SELECT p.id, p.type, p.checksum,
-		       sv_large.short_path as large_path,
+		       sv_medium.short_path as medium_path,
 		       sv_original.short_path as original_path
 		FROM photos p
 		LEFT JOIN photos_tags pt ON p.id = pt.photo_id AND pt.tag_id = ?
-		LEFT JOIN size_variants sv_large ON p.id = sv_large.photo_id AND sv_large.type = 2
+		LEFT JOIN size_variants sv_medium ON p.id = sv_medium.photo_id AND sv_medium.type = 2
 		LEFT JOIN size_variants sv_original ON p.id = sv_original.photo_id AND sv_original.type = 0
 		WHERE pt.photo_id IS NULL
 		AND p._dz_bw IS NULL
@@ -214,17 +223,17 @@ func (app *App) getPhotosToProcess() ([]Photo, error) {
 	var photos []Photo
 	for rows.Next() {
 		var photo Photo
-		var largePath, originalPath sql.NullString
+		var mediumPath, originalPath sql.NullString
 
 		if err := rows.Scan(
 			&photo.ID, &photo.Type, &photo.Checksum,
-			&largePath, &originalPath,
+			&mediumPath, &originalPath,
 		); err != nil {
 			return nil, fmt.Errorf("failed to scan photo: %w", err)
 		}
 
-		if largePath.Valid {
-			photo.LargePath = largePath.String
+		if mediumPath.Valid {
+			photo.LargePath = mediumPath.String
 		}
 		if originalPath.Valid {
 			photo.OriginalPath = originalPath.String
@@ -326,12 +335,23 @@ func (app *App) downloadAndAnalyzeImage(photo *Photo) (image.Image, error) {
 
 	var lastErr error
 	for _, path := range paths {
-		url := app.config.ImageBaseURL + path
-		if app.verbose {
-			app.logger.Printf("Downloading: %s", url)
+		baseURL, err := url.Parse(app.config.ImageBaseURL)
+		if err != nil {
+			return nil, fmt.Errorf("invalid base URL: %w", err)
 		}
 
-		resp, err := http.Get(url)
+		imageURL, err := baseURL.Parse(path)
+		if err != nil {
+			lastErr = fmt.Errorf("failed to parse image path: %w", err)
+			continue
+		}
+
+		fullURL := imageURL.String()
+		if app.verbose {
+			app.logger.Printf("Downloading: %s", fullURL)
+		}
+
+		resp, err := http.Get(fullURL)
 		if err != nil {
 			lastErr = err
 			continue
