@@ -1,10 +1,23 @@
-# Lychee Black & White Tagger
+# lychee-bw-tagger
 
-Automatically detects and tags grayscale photos in a Lychee installation.
+Automatically detects and tags grayscale photos in your Lychee installation.
 
-## Configuration
+## What It Does
 
-Copy `config.yml.example` to `config.yml`:
+Analyzes photos in a [Lychee](https://github.com/LycheeOrg/Lychee) database to identify grayscale images and automatically tags them as "Black & White". The program:
+
+1. Adds a `_dz_bw` column to the photos table to track processing
+2. Finds or creates a "Black & White" tag in the database
+3. Downloads and analyzes unprocessed photos using grayscale detection
+4. Applies the tag to detected grayscale photos
+
+Supports JPEG, PNG, and WebP formats. Automatically skips videos and RAW files.
+
+## Usage
+
+### Configuration
+
+Create `config.yml` based on `config.yml.example`:
 
 ```yaml
 database:
@@ -18,25 +31,58 @@ grayscale_tolerance: 0.1
 image_base_url: "https://your-lychee-instance.com"
 ```
 
-## Usage
+### Running
 
 ```bash
-./lychee-bw-tagger
-./lychee-bw-tagger -config /path/to/config.yml
-./lychee-bw-tagger -verbose
+lychee-bw-tagger
+lychee-bw-tagger -config /path/to/config.yml
+lychee-bw-tagger -verbose
 ```
 
-## Building
+### Docker
 
-```bash
-go build -o lychee-bw-tagger
+```shell
+docker run --rm -v /path/to/config.yml:/config.yml cdzombak/lychee-bw-tagger:1 -config /config.yml
 ```
 
-## How It Works
+## Installation
 
-1. Adds `_dz_bw` column to photos table
-2. Finds or creates "Black & White" tag
-3. Downloads and analyzes unprocessed photos
-4. Tags grayscale photos and updates database
+## Debian via apt repository
 
-Supports JPEG, PNG, and WebP. Skips videos and RAW files.
+Set up my `oss` apt repository:
+
+```shell
+sudo mkdir -p /etc/apt/keyrings
+curl -fsSL https://dist.cdzombak.net/keys/dist-cdzombak-net.gpg -o /etc/apt/keyrings/dist-cdzombak-net.gpg
+sudo chmod 644 /etc/apt/keyrings/dist-cdzombak-net.gpg
+sudo mkdir -p /etc/apt/sources.list.d
+sudo curl -fsSL https://dist.cdzombak.net/cdzombak-oss.sources -o /etc/apt/sources.list.d/cdzombak-oss.sources
+sudo chmod 644 /etc/apt/sources.list.d/cdzombak-oss.sources
+sudo apt update
+```
+
+Then install `lychee-bw-tagger` via `apt-get`:
+
+```shell
+sudo apt-get install lychee-bw-tagger
+```
+
+## Homebrew
+
+```shell
+brew install cdzombak/oss/lychee-bw-tagger
+```
+
+## Manual from build artifacts
+
+Pre-built binaries for Linux and macOS on various architectures are downloadable from each [GitHub Release](https://github.com/cdzombak/lychee-bw-tagger/releases). Debian packages for each release are available as well.
+
+## License
+
+GNU GPL v3; see [LICENSE](LICENSE) in this repo for details.
+
+## Author
+
+Chris Dzombak
+- [dzombak.com](https://www.dzombak.com)
+- [GitHub @cdzombak](https://github.com/cdzombak)
