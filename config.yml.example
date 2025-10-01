@@ -10,5 +10,5 @@ database:
 # Tolerance for grayscale detection (0.0 to 1.0, where 0.0 is strict and 1.0 is very permissive)
 grayscale_tolerance: 0.1
 
-# Base URL for accessing image files (should point to your Lychee installation's image directory)
-image_base_url: "https://your-lychee-instance.com/public/"
+# Base URL for accessing image files (the /uploads/ path is added automatically)
+image_base_url: "https://your-lychee-instance.com"
