@@ -21,6 +21,10 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+var (
+	version string = "<dev>"
+)
+
 // Config represents the application configuration
 type Config struct {
 	Database struct {
@@ -46,7 +50,13 @@ type App struct {
 func main() {
 	var configFile = flag.String("config", "./config.yml", "Path to configuration file")
 	var verbose = flag.Bool("verbose", false, "Enable verbose logging")
+	var showVersion = flag.Bool("version", false, "Print version information and exit")
 	flag.Parse()
+
+	if *showVersion {
+		fmt.Printf("lychee-bw-tagger %s\n", version)
+		os.Exit(0)
+	}
 
 	app := &App{
 		verbose: *verbose,
