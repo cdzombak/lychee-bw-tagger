@@ -6,6 +6,9 @@
 *.dylib
 lychee-bw-tagger
 
+# Build output
+out/
+
 # Test binary, built with `go test -c`
 *.test
 
