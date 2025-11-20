@@ -34,8 +34,9 @@ type Config struct {
 		Password string `yaml:"password"`
 		Database string `yaml:"database"`
 	} `yaml:"database"`
-	GrayscaleTolerance float64 `yaml:"grayscale_tolerance"`
-	ImageBaseURL       string `yaml:"image_base_url"`
+	GrayscaleTolerance float64  `yaml:"grayscale_tolerance"`
+	ImageBaseURL       string   `yaml:"image_base_url"`
+	IgnoreAlbums       []string `yaml:"ignore_albums"`
 }
 
 // App represents the application state
@@ -208,7 +209,7 @@ func (app *App) findOrCreateBWTag() error {
 
 // getPhotosToProcess retrieves photos that need processing
 func (app *App) getPhotosToProcess() ([]Photo, error) {
-	query := `
+	baseQuery := `
 		SELECT p.id, p.type, p.checksum,
 		       sv_medium.short_path as medium_path,
 		       sv_original.short_path as original_path
@@ -219,12 +220,45 @@ func (app *App) getPhotosToProcess() ([]Photo, error) {
 		WHERE pt.photo_id IS NULL
 		AND p._dz_bw IS NULL
 		AND p.type NOT LIKE '%video%'
-		AND p.type NOT LIKE '%raw%'
-		ORDER BY p.created_at ASC
-		LIMIT 100
-	`
+		AND p.type NOT LIKE '%raw%'`
 
-	rows, err := app.db.Query(query, app.bwTagID)
+	var query string
+	var args []interface{}
+	args = append(args, app.bwTagID)
+
+	// Add exclusion for ignored albums if configured
+	if len(app.config.IgnoreAlbums) > 0 {
+		// Build placeholders for album names
+		placeholders := make([]string, len(app.config.IgnoreAlbums))
+		for i := range app.config.IgnoreAlbums {
+			placeholders[i] = "?"
+			args = append(args, app.config.IgnoreAlbums[i])
+		}
+		placeholdersStr := strings.Join(placeholders, ",")
+
+		query = baseQuery + `
+		AND NOT EXISTS (
+			SELECT 1
+			FROM photo_album pa
+			JOIN albums a ON pa.album_id = a.id
+			WHERE pa.photo_id = p.id
+			AND EXISTS (
+				SELECT 1
+				FROM albums ignored_album
+				WHERE ignored_album.id IN (` + placeholdersStr + `)
+				AND a._lft >= ignored_album._lft
+				AND a._rgt <= ignored_album._rgt
+			)
+		)
+		ORDER BY p.created_at ASC
+		LIMIT 100`
+	} else {
+		query = baseQuery + `
+		ORDER BY p.created_at ASC
+		LIMIT 100`
+	}
+
+	rows, err := app.db.Query(query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query photos: %w", err)
 	}

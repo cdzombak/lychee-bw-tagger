@@ -7,3 +7,8 @@ database:
 
 grayscale_tolerance: 0.1
 image_base_url: "https://your-lychee-instance.com"
+
+# Optional: List of album IDs to ignore. Photos in these albums (or any sub-albums) will not be tagged.
+# ignore_albums:
+#   - "abc123def456ghi789jkl012"
+#   - "mno345pqr678stu901vwx234"
